@@ -1,7 +1,10 @@
 package matrix;
 
 import java.io.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class SparseMatrix extends Matrix {
@@ -71,13 +74,15 @@ public class SparseMatrix extends Matrix {
     }
 
     public SparseMatrix mul(SparseMatrix matrix2) throws InterruptedException {
-        final int temp=Runtime.getRuntime().availableProcessors();
+        final int temp=4;
         Thread thread[]=new Thread[temp];
         SparseMatrix matrix1 = this;
         matrix2 = matrix2.transponation(matrix2);
         ConcurrentHashMap<Integer, Column> matrixtemp=new ConcurrentHashMap<Integer, Column>();
         SparseMatrix matrix = new SparseMatrix(matrixtemp,matrix1.row,matrix2.column);
-        MulParal t = new MulParal(matrix1.matrix,matrix2.matrix,matrix.matrix);
+        Iterator<ConcurrentHashMap.Entry<Integer, Column>> iter1 = this.matrix.entrySet().iterator();
+
+        MulParal t = new MulParal(matrix1.matrix,matrix2.matrix,matrix.matrix, iter1);
         for (int i=0;i<temp;i++) {
             thread[i]=new Thread(t);
             thread[i].start();
@@ -89,30 +94,51 @@ public class SparseMatrix extends Matrix {
     }
 
     class MulParal implements Runnable {
+        private final Iterator<Map.Entry<Integer, Column>> iter1;
         ConcurrentHashMap<Integer, Column> matrix1;
         ConcurrentHashMap<Integer, Column> matrix2;
         ConcurrentHashMap<Integer, Column> matrix;
 
-        public MulParal(ConcurrentHashMap<Integer, Column> matrix1, ConcurrentHashMap<Integer, Column> matrix2, ConcurrentHashMap<Integer, Column> matrix) {
+        public MulParal(ConcurrentHashMap<Integer, Column> matrix1, ConcurrentHashMap<Integer, Column> matrix2, ConcurrentHashMap<Integer, Column> matrix, Iterator<Map.Entry<Integer, Column>> iter1) {
             this.matrix1 = matrix1;
             this.matrix2 = matrix2;
             this.matrix = matrix;
+            this.iter1 = iter1;
         }
 
-        public void run() {
-            double temp = 0;
-            for (HashMap.Entry<Integer, Column> coordinate1 : matrix1.entrySet()) {
-                Column value = new Column();
-                for (HashMap.Entry<Integer, Column> coordinate2 : matrix2.entrySet()) {
-                    for (HashMap.Entry<Integer, Double> coordinate3 : coordinate1.getValue().entrySet())
-                        temp += coordinate3.getValue() * matrix2.get(coordinate2.getKey()).get(coordinate3.getKey());
-                    value.put(coordinate2.getKey(), temp);
-                    temp = 0;
-                }
-                matrix.put(coordinate1.getKey(), value);
 
-            }
-        }
+     public void run() {
+         while (iter1.hasNext()) {
+             Map.Entry entry1 = iter1.next();
+             Integer value1 = (Integer) entry1.getValue();
+             HashMap<Integer, Double> key1 = (HashMap<Integer, Double>) entry1.getKey();
+             Iterator<HashMap.Entry<Integer, Column>> iter2 = matrix2.entrySet().iterator();
+             Column resColumn = new Column();
+             while (iter2.hasNext()) {
+                 HashMap.Entry entry2 = iter2.next();
+                 Integer value2 = (Integer) entry2.getValue();
+                 HashMap<Integer, Double> key2 = (HashMap<Integer, Double>) entry2.getKey();
+                 Iterator iterElement = key1.entrySet().iterator();
+                 double resKey = 0;
+                 while (iterElement.hasNext()) {
+                     HashMap.Entry entryElement = (HashMap.Entry) iterElement.next();
+                     Integer valueElement1 = (Integer) entryElement.getValue();
+                     Double keyElement1 = (Double) entryElement.getKey();
+                     if (key2.get(valueElement1) != null) {
+                         double a = key2.get(valueElement1);
+                         resKey = resKey + keyElement1 * a;
+                     }
+                 }
+                 if (resKey != 0) {
+                     resColumn.put(value2, resKey);
+                 }
+             }
+             if (resColumn != null) {
+                 matrix.put(value1, resColumn);
+             }
+         }
+
+     }
     }
 
 

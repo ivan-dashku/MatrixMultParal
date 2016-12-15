@@ -1,7 +1,8 @@
 package matrix;
 
 import java.io.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class DenseMatrix extends Matrix {
@@ -113,7 +114,7 @@ public class DenseMatrix extends Matrix {
         boolean bool=false;
         for (int i=0;i<matrix1.row;i++) {
             Column value=new Column();
-            for (HashMap.Entry<Integer,Column> coordinate2: tempmatrix2.matrix.entrySet()){
+            for (HashMap.Entry<Integer, Column> coordinate2: tempmatrix2.matrix.entrySet()){
                 for (int k=0;k<matrix1.column;k++)
                     temp+=matrix1.matrix[i][k]*tempmatrix2.matrix.get(coordinate2.getKey()).get(k);
                 if (temp!=0) {
